@@ -41,7 +41,7 @@ import ConfigParser
 from sos.plugins import import_plugin
 from sos.utilities import ImporterHelper
 from stat import ST_UID, ST_GID, ST_MODE, ST_CTIME, ST_ATIME, ST_MTIME, S_IMODE
-from time import strftime, localtime
+from time import strftime, localtime, time
 from collections import deque
 from itertools import izip
 import textwrap
@@ -637,6 +637,8 @@ class SoSReport(object):
 
 
     def copy_stuff(self):
+        if self.opts.profiler:
+            start_time = time()
         plugruncount = 0
         for i in izip(self.loaded_plugins):
             plugruncount += 1
@@ -653,6 +655,10 @@ class SoSReport(object):
                     raise
                 else:
                     self._log_plugin_exception(plugname)
+        if self.opts.profiler:
+            time_passed = time() - start_time
+            self.proflog.debug("done  : %-75s time: %f"
+                            % ("copy_stuff", time_passed))
 
     def report(self):
         for plugname, plug in self.loaded_plugins:
@@ -891,11 +897,24 @@ class SoSReport(object):
             self.ui_log.info("")
 
             if self.opts.report:
+                if self.opts.profiler:
+                    start_time = time()
                 self.report()
                 self.html_report()
                 self.plain_report()
+                if self.opts.profiler:
+                    time_passed = time() - start_time
+                    self.proflog.debug("done  : %-75s time: %f"
+                                    % ("reports", time_passed))
 
+            if self.opts.profiler:
+                start_time = time()
             self.postproc()
+            if self.opts.profiler:
+                time_passed = time() - start_time
+                self.proflog.debug("done  : %-75s time: %f"
+                                % ("postproc", time_passed))
+
             self.version()
 
             return self.final_work()
