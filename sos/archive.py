@@ -25,6 +25,7 @@ import logging
 import shlex
 # required for compression callout (FIXME: move to policy?)
 from subprocess import Popen, PIPE, STDOUT
+from sos.utilities import FilterIO
 
 try:
     from cStringIO import StringIO
@@ -97,7 +98,7 @@ class TarFileArchive(Archive):
             return
         self.add_file(path)
 
-    def add_file(self, src, dest=None):
+    def add_file(self, src, dest=None, filt=None):
         if dest:
             dest = self.prepend(dest)
         else:
@@ -124,6 +125,8 @@ class TarFileArchive(Archive):
                 content = ""
             tar_info.size = len(content)
             fileobj = StringIO(content)
+            if filt:
+                fileobj = FilterIO(fileobj, filt)
 
         # FIXME: handle this at a higher level?
         if src.startswith("/sys/") or src.startswith ("/proc/"):
@@ -132,7 +135,8 @@ class TarFileArchive(Archive):
             context = self.get_selinux_context(src)
             if context:
                 tar_info.pax_headers['RHT.security.selinux'] = context
-        try:
+#        try:
+        if True:
             fstat = os.stat(src)
             if os.path.isdir(src) and not (fstat.st_mode & 000200):
                 # directories not writable by their owner are a world of pain
@@ -142,12 +146,12 @@ class TarFileArchive(Archive):
                 mode = None
             self.set_tar_info_from_stat(tar_info,fstat, mode)
             self.tarfile.addfile(tar_info, fileobj)
-        except Exception as e:
-            raise e
-        finally:
+#        except Exception as e:
+#            raise e
+#        finally:
             mode = None
 
-    def add_string(self, content, dest):
+    def add_string(self, content, dest, filt=None):
         fstat = None
         if os.path.exists(dest):
             fstat = os.stat(dest)
@@ -161,6 +165,9 @@ class TarFileArchive(Archive):
             self.set_tar_info_from_stat(tar_info, fstat)
         else:
             tar_info.mtime = time.time()
+        fileobj = StringIO(content)
+        if filt:
+            fileobj = FilterIO(fileobj,filt)
         self.tarfile.addfile(tar_info, StringIO(content))
 
     def add_link(self, dest, link_name):

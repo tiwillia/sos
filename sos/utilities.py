@@ -103,7 +103,6 @@ def convert_bytes(bytes_, K=1 << 10, M=1 << 20, G=1 << 30, T=1 << 40):
         return '%d' % bytes_
 
 
-
 def find(file_pattern, top_dir, max_depth=None, path_pattern=None):
     """generator function to find files recursively. Usage:
 
@@ -185,6 +184,97 @@ def shell_out(cmd):
     """Uses subprocess.Popen to make a system call and returns stdout.
     Does not handle exceptions."""
     return sosGetCommandOutput(cmd)[1]
+
+class RegexFilter(object)
+    pattern = None
+    replace = None
+    re = None
+
+    def __init__(self, pattern, replace):
+        self.pattern = pattern
+        self.replace = replace
+        self.re = re.compile(pattern)
+
+    def filter(self, buf):
+        print "filtering: %s" % buf
+        saved_buf = buf 
+        buf = re.sub(self.re, self.replace, buf)
+        delta = len(saved_buf) - len(buf)
+        if delta < 0:
+            return re.sub(self.re, self.replace[:delta], saved_buf)
+        return re.sub(self.re, self.replace + (delta * '\x00'), saved_buf)
+
+# From StringIO.py
+def _raise_ifclosed(closed):
+    if closed:
+        raise ValueError, "I/O operation on closed file"
+
+class FilterIO:
+    """ Make a Filter wrap around a file
+    """
+    _fp = None
+    _filter = None
+    
+    def __init__(self, fp, filt):
+        self._fp = fp
+        self._filter = filt
+        self.pos = 0
+        self.closed = False
+        self.softspace = 0
+
+    def __iter__(self):
+        _raise_ifclosed(self.closed)
+        return self
+
+    def next(self):
+        _raise_ifclosed(self.closed)
+        return self._filter.filter(self._fp.next())
+
+    def close(self):
+        if self._fp and not self.closed:
+            self.closed = True
+            return self._fp.close()
+
+    def isatty(self):
+        _raise_ifclosed(self.closed)
+        return False
+
+    def seek(self, offset, whence=None):
+        _raise_ifclosed(self.closed)
+        return self._fp.seek(offset, whence)
+
+    def tell(self):
+        _raise_ifclosed(self.closed)
+        return self._fp.tell()
+
+    def read(self, size=-1):
+        _raise_ifclosed(self.closed)
+        buf = self._filter.filter(self._fp.read(size))
+        self.pos = self._fp.tell()
+        return buf
+
+    def readline(self, size=None):
+        _raise_ifclosed(self.closed)
+        buf = self._filter.filter(self._fp.readline(size))
+        self.pos = self._fp.tell()
+        return buf
+
+    def readlines(self, sizehint=0):
+        _raise_ifclosed(self.closed)
+        lines = []
+        for line in self._fp.readlines():
+            lines.append(self._filter.filter(line))
+        return lines
+
+    def flush(self):
+        _raise_ifclosed(self.closed)
+        return self._fp.flush()
+
+    def fileno(self):
+        if not self._fp:
+            raise ValueError
+        return self._fp.fileno()
+
 
 class DirTree(object):
     """Builds an ascii representation of a directory structure"""

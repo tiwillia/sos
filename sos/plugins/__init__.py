@@ -25,7 +25,12 @@
 # pylint: disable-msg = W0613
 from __future__ import with_statement
 
-from sos.utilities import sosGetCommandOutput, import_module, grep, fileobj, tail
+from sos.utilities import sosGetCommandOutput, \
+                        import_module, \
+                        grep, \
+                        fileobj, \
+                        tail, \
+                        RegexFilter
 from sos import _sos as _
 import inspect
 import os
@@ -90,7 +95,6 @@ def mangle_command(command):
     mangledname = re.sub(r"/", ".", mangledname).strip(" ._-")[0:64]
     return mangledname
 
-
 class PluginException(Exception):
     pass
 
@@ -137,6 +141,8 @@ class Plugin(object):
         self.copyPaths = []
         self.copyStrings = []
         self.collectProgs = []
+        self.cmdSubHooks = {}
+        self.fileSubHooks = {}
 
         self.must_exit = False
 
@@ -163,6 +169,37 @@ class Plugin(object):
     def isInstalled(self, package_name):
         '''Is the package $package_name installed?'''
         return (self.policy().pkgByName(package_name) is not None)
+
+    def addCmdOutputSub(self, cmd, pattern, replace):
+        '''Add a hook to apply a regexp substitution to command output archived
+        by sosreport.  cmd is the command name from which output is collected
+        (i.e. excluding parameters). The regexp can be a string or a compiled
+        re object. The substitution string, subst, is a string that replaces
+        each occurrence of regexp in each line collected from cmd. Internally
+        'cmd' is treated as a glob with a leading and trailing '*' and each
+        matching command from the current module's command list is subjected to
+        the replacement.
+        '''
+#        self.soslog.debug("adding substitute hook '%s' for '%s' in command %s"
+#                    % (replace, pattern, cmd))
+#        if cmd not in self.cmdSubHooks.keys():
+#            self.cmdSubHooks[cmd] = []
+#        self.cmdSubHooks[cmd].append(RegexFilter(pattern, replace))
+        self.cmdSubHooks[cmd] = RegexFilter(pattern, replace)
+
+    def addFileSub(self, srcpath, pattern, replace):
+        '''Add a hook to apply a regexp substitution to a file archived by
+        sosreport. srcpath is the path in the archive where the file can be
+        found.  pattern can be a regexp string or a compiled re object. replace
+        is a string to replace each occurance of pattern in the content of
+        srcpath.
+        '''
+        self.soslog.debug("adding substitute hook '%s' for '%s' in file %s"
+                    % (replace, pattern, srcpath))
+#        if srcpath not in self.fileSubHooks.keys():
+#            self.fileSubHooks[srcpath] = []
+#        self.fileSubHooks[srcpath].append(RegexFilter(pattern, replace))
+        self.fileSubHooks[srcpath] = RegexFilter(pattern, replace)
 
     def doCmdOutputSub(self, cmd, regexp, subst):
         '''Apply a regexp substitution to command output archived by sosreport.
@@ -340,14 +377,20 @@ class Plugin(object):
         # if we get here, it's definitely a regular file (not a symlink or dir)
         self.soslog.debug("copying file %s to %s" % (srcpath,dest))
 
-        try:
+        if srcpath in self.fileSubHooks.keys():
+            filt = self.fileSubHooks[srcpath]
+        else:
+            filt = None
+
+#        try:
+        if True:
             stat = os.stat(srcpath)
             # if not readable(srcpath)
             if not (stat.st_mode & 0444):
                 # FIXME: reflect permissions in archive
                 self.archive.add_string("", dest)
             else:
-                self.archive.add_file(srcpath, dest)
+                self.archive.add_file(srcpath, dest, filt)
 
             self.copiedFiles.append({
                 'srcpath':srcpath,
@@ -357,9 +400,9 @@ class Plugin(object):
             if self.cInfo['cmdlineopts'].profiler:
                 time_passed = time() - start_time
                 self.proflog.debug("copied: %-75s time: %f" % (srcpath, time_passed))
-        except Exception, e:
-            self.soslog.error("Unable to copy %s to %s" % (srcpath, dest))
-            self.soslog.error(traceback.format_exc())
+#        except Exception, e:
+#            self.soslog.error("Unable to copy %s to %s" % (srcpath, dest))
+#            self.soslog.error(traceback.format_exc())
 
 
     def addForbiddenPath(self, forbiddenPath):
@@ -536,11 +579,19 @@ class Plugin(object):
         if self.cInfo['cmdlineopts'].profiler:
             start_time = time()
 
+        cmd = exe.split()[0]
+        filt = None
+        if cmd in self.cmdSubHooks.keys():
+            filt = self.cmdSubHooks[cmd]
+
         # pylint: disable-msg = W0612
         status, shout, runtime = sosGetCommandOutput(exe, timeout=timeout)
         if (status == 127):
             self.soslog.info("could not run '%s': command not found" % exe)
             return None
+
+        if filt:
+            shout = filt.filter(shout)
 
         if suggest_filename:
             outfn = self.makeCommandFilename(suggest_filename)
