@@ -185,7 +185,7 @@ def shell_out(cmd):
     Does not handle exceptions."""
     return sosGetCommandOutput(cmd)[1]
 
-class RegexFilter(object)
+class RegexFilter(object):
     pattern = None
     replace = None
     re = None
