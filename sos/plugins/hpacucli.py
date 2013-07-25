@@ -1,3 +1,4 @@
+# -*- coding: utf-8
 # Copyright (C) 2013 Red Hat Inc., Harald Jensås <hjensas@redhat.com>
 
 ### This program is free software; you can redistribute it and/or modify
