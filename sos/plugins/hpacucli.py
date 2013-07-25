@@ -54,6 +54,9 @@ def unzip(zipfilepath, dstdir):
 class hpacucli(sos.plugintools.PluginBase):
     """HP Smart Array RAID Storage information
     """
+
+    option_list = [("diag", 'collect hpacucli diagnostics', 'slow', False)]
+
     def checkenabled(self):
         if os.path.exists("/usr/sbin/hpacucli"):
             return True
@@ -64,15 +67,16 @@ class hpacucli(sos.plugintools.PluginBase):
         self.collectExtOutput("/usr/sbin/hpacucli ctrl all show")
         self.collectExtOutput("/usr/sbin/hpacucli ctrl all show status")
         self.collectExtOutput("/usr/sbin/hpacucli ctrl all show detail")
-        # hpacuclu insist on creating a zip archive for diag
-        tmpdir = tempfile.mkdtemp()
-        filename = "hpacucli-diag.zip"
-        filepath = os.path.join(tmpdir, filename)
-        self.callExtProg("/usr/sbin/hpacucli ctrl all diag file=" + filepath)
-        # Extract diag content into cmddir
-        diagdir = os.path.join(self.cInfo['cmddir'], "hpacucli/diag")
-        if not os.path.exists(diagdir):
-            os.makedirs(diagdir)
-        unzip(filepath, diagdir)
-        shutil.rmtree(tmpdir)
+        if self.get_option('diag'):
+            # hpacuclu insist on creating a zip archive for diag
+            tmpdir = tempfile.mkdtemp()
+            filename = "hpacucli-diag.zip"
+            filepath = os.path.join(tmpdir, filename)
+            self.callExtProg("/usr/sbin/hpacucli ctrl all diag file=" + filepath)
+            # Extract diag content into cmddir
+            diagdir = os.path.join(self.cInfo['cmddir'], "hpacucli/diag")
+            if not os.path.exists(diagdir):
+                os.makedirs(diagdir)
+            unzip(filepath, diagdir)
+            shutil.rmtree(tmpdir)
         return
