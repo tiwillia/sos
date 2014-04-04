@@ -1,4 +1,4 @@
-%{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
+%{!?python3_sitelib: %define python_sitelib %(%{__python3} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 Summary: A set of tools to gather troubleshooting information from a system
 Name: sos
@@ -10,15 +10,13 @@ License: GPLv2+
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 BuildArch: noarch
 Url: http://fedorahosted.org/sos
-BuildRequires: python-devel
+BuildRequires: python3-devel
 BuildRequires: gettext
-BuildRequires: python-six
-Requires: libxml2-python
-Requires: rpm-python
+BuildRequires: python3-six
 Requires: tar
 Requires: bzip2
 Requires: xz
-Requires: python-six
+Requires: python3-six
 
 %description
 Sos is a set of tools that gathers information about system
@@ -44,13 +42,16 @@ rm -rf ${RPM_BUILD_ROOT}
 %defattr(-,root,root,-)
 %{_sbindir}/sosreport
 %{_datadir}/%{name}
-%{python_sitelib}/*
+%{python3_sitelib}/*
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %doc AUTHORS README.md LICENSE 
 %config(noreplace) %{_sysconfdir}/sos.conf
 
 %changelog
+* Fri Apr 04 2014 Bryn M. Reeves <bmr@redhat.com> = 3.0-2
+- Python3 build
+
 * Mon Jun 10 2013 Bryn M. Reeves <bmr@redhat.com> = 3.0-1
 - New upstream release
 

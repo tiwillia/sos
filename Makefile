@@ -10,7 +10,9 @@ RELEASE := $(shell echo `awk '/^Release:/ {gsub(/\%.*/,""); print $2}' sos.spec`
 REPO = https://github.com/sosreport/sos
 
 SUBDIRS = po sos sos/plugins sos/policies
+PYTHON=python3
 PYFILES = $(wildcard *.py)
+PYBIN=$(shell $(PYTHON) -c "import os; print(os.readlink('/proc/self/exe'))")
 # OS X via brew
 # MSGCAT = /usr/local/Cellar/gettext/0.18.1.1/bin/msgcat
 MSGCAT = msgcat
@@ -29,8 +31,8 @@ ARCHIVE_DIR = $(DIST_BUILD_DIR)/$(NAME)-$(VERSION)
 SRC_BUILD = $(DIST_BUILD_DIR)/sdist
 PO_DIR = $(SRC_BUILD)/sos/po
 
-build:
-	for d in $(SUBDIRS); do make -C $$d; [ $$? = 0 ] || exit 1 ; done
+build: sosreport
+	for d in $(SUBDIRS); do make -C $$d PYTHON=$(PYTHON); [ $$? = 0 ] || exit 1 ; done
 
 install: updateversion
 	mkdir -p $(DESTDIR)/usr/sbin
@@ -45,23 +47,28 @@ install: updateversion
 	install -m644 sos.conf.5.gz $(DESTDIR)/usr/share/man/man5/.
 	install -m644 AUTHORS README.md $(DESTDIR)/usr/share/$(NAME)/.
 	install -m644 $(NAME).conf $(DESTDIR)/etc/$(NAME).conf
-	for d in $(SUBDIRS); do make DESTDIR=`cd $(DESTDIR); pwd` -C $$d install; [ $$? = 0 ] || exit 1; done
+	for d in $(SUBDIRS); do make PYTHON=$(PYTHON) DESTDIR=`cd $(DESTDIR); pwd` -C $$d install; [ $$? = 0 ] || exit 1; done
 
 updateversion:
 	sed 's/@SOSVERSION@/$(VERSION)/g' sos/__init__.py.in > sos/__init__.py
 
+sosreport: sosreport.in
+	sed 's|@PYBIN@|$(PYBIN)|g' sosreport.in > sosreport
+	chmod ugo+x sosreport
+
 $(NAME)-$(VERSION).tar.gz: clean
 	@mkdir -p $(ARCHIVE_DIR)
-	@tar -cv sosreport sos doc man po sos.conf AUTHORS LICENSE README.md sos.spec Makefile | tar -x -C $(ARCHIVE_DIR)
+	@tar -cv sosreport.in sos doc man po sos.conf AUTHORS LICENSE README.md sos.spec Makefile | tar -x -C $(ARCHIVE_DIR)
 	@tar Ccvzf $(DIST_BUILD_DIR) $(DIST_BUILD_DIR)/$(NAME)-$(VERSION).tar.gz $(NAME)-$(VERSION) --exclude-vcs
 
 clean:
 	@rm -fv *~ .*~ changenew ChangeLog.old $(NAME)-$(VERSION).tar.gz sosreport.1.gz sos.conf.5.gz
 	@rm -rf rpm-build
+	@rm -f sosreport
 	@for i in `find . -iname *.pyc`; do \
 		rm $$i; \
 	done; \
-	for d in $(SUBDIRS); do make -C $$d clean ; done
+	for d in $(SUBDIRS); do make -C $$d PYTHON=$(PYTHON) clean ; done
 
 srpm: clean $(NAME)-$(VERSION).tar.gz
 	$(RPM_WITH_DIRS) -ts $(DIST_BUILD_DIR)/$(NAME)-$(VERSION).tar.gz
