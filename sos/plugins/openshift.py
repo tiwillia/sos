@@ -17,7 +17,7 @@ from sos.plugins import Plugin, RedHatPlugin
 class Openshift(Plugin, RedHatPlugin):
     '''Openshift related information'''
 
-    plugin_name = "Openshift"
+    plugin_name = "openshift"
 
     option_list = [("broker", "Gathers broker specific files", "slow", False),
            ("node", "Gathers node specific files", "slow", False)]
@@ -26,38 +26,40 @@ class Openshift(Plugin, RedHatPlugin):
         self.add_copy_specs([
             "/etc/openshift-enterprise-version",
             "/etc/openshift/",
+            "/var/log/openshift/",
             "/etc/dhcp/dhclient-*"
         ])
+
+        self.add_cmd_output("oo-diagnostics")
 
         if self.option_enabled("broker"):
             self.add_copy_specs([
                 "/var/log/activemq",
                 "/var/log/mongodb",
-                "/var/log/openshift",
-                "/var/www/openshift/broker/log",
-                "/var/www/openshift/broker/httpd/logs/",
-                "/var/www/openshift/console/log",
-                "/var/www/openshift/console/httpd/logs",
-                "/var/log/openshift/user_action.log"
+                "/var/log/mcollective-client.log",
+                "/var/log/openshift/broker",
+                "/var/log/openshift/console"
             ])
 
             self.add_cmd_outputs([
-                "oo-accpet-broker -v",
+                "oo-accept-broker -v",
                 "oo-admin-chk -v",
                 "mco ping",
+                "oo-mco ping",
                 "gem list --local"
+                "scl enable ruby193 'gem list --local'"
             ])
             runat = '/var/www/openshift/broker/'
-            self.add_cmd_output("bundle --local", runat)
+            self.add_cmd_output("scl enable ruby193 'bundle --local'", runat)
                                         
-
         if self.option_enabled("node"):
             self.add_copy_specs([
-                "/var/log/openshift/node",
-                "/cgroup/all/openshift",
+                "/var/log/openshift/node/",
+                "/cgroup/*/openshift",
                 "/var/log/mcollective.log",
+                "/opt/rh/ruby193/root/etc/mcollective/"
                 "/var/log/openshift-gears-async-start.log",
-                "/var/log/httpd/error_log"
+                "/var/log/httpd/"
             ])
 
             self.add_cmd_outputs([
@@ -68,19 +70,19 @@ class Openshift(Plugin, RedHatPlugin):
 
     def postproc(self):
         self.do_file_sub('/etc/openshift/broker.conf',
-                r"(MONGO_PASSWORD=)(.*)",
-                r"\1*******")
+                        r"(MONGO_PASSWORD=)(.*)",
+                        r"\1*******")
 
         self.do_file_sub('/etc/openshift/broker.conf',
-                r"(SESSION_SECRET=)(.*)",
-                r"\1*******")
+                        r"(SESSION_SECRET=)(.*)",
+                        r"\1*******")
 
         self.do_file_sub('/etc/openshift/console.conf',
-                r"(SESSION_SECRET=)(.*)",
-                r"\1*******")
+                        r"(SESSION_SECRET=)(.*)",
+                        r"\1*******")
 
         self.do_file_sub('/etc/openshift/htpasswd',
-                r"(.*:)(.*)",
-                r"\1********")
+                        r"(.*:)(.*)",
+                        r"\1********")
 
 # vim: et ts=4 sw=4
