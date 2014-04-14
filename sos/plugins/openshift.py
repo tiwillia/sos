@@ -22,6 +22,9 @@ class Openshift(Plugin, RedHatPlugin):
     option_list = [("broker", "Gathers broker specific files", "slow", False),
            ("node", "Gathers node specific files", "slow", False)]
 
+    ruby = "ruby193"
+    vendor ="rh"
+
     def setup(self):
         self.add_copy_specs([
             "/etc/openshift-enterprise-version",
@@ -46,17 +49,19 @@ class Openshift(Plugin, RedHatPlugin):
                 "mco ping",
                 "oo-mco ping",
                 "gem list --local"
-                "scl enable ruby193 'gem list --local'"
+                "scl enable %s 'gem list --local'" % self.ruby
             ])
-            runat = '/var/www/openshift/broker/'
-            self.add_cmd_output("scl enable ruby193 'bundle --local'", runat)
+
+            brokerdir = '/var/www/openshift/broker/'
+            cmd = "scl enable %s 'bundle --local'" % self.ruby
+            self.add_cmd_output(cmd, runat=brokerdir)
                                         
         if self.option_enabled("node"):
             self.add_copy_specs([
                 "/var/log/openshift/node/",
                 "/cgroup/*/openshift",
                 "/var/log/mcollective.log",
-                "/opt/rh/ruby193/root/etc/mcollective/"
+                "/opt/%s/%s/root/etc/mcollective/" % (self.vendor, self.ruby),
                 "/var/log/openshift-gears-async-start.log",
             ])
 
