@@ -27,7 +27,6 @@ class Openshift(Plugin, RedHatPlugin):
             "/etc/openshift-enterprise-version",
             "/etc/openshift/",
             "/var/log/openshift/",
-            "/etc/dhcp/dhclient-*"
         ])
 
         self.add_cmd_output("oo-diagnostics")
@@ -59,7 +58,6 @@ class Openshift(Plugin, RedHatPlugin):
                 "/var/log/mcollective.log",
                 "/opt/rh/ruby193/root/etc/mcollective/"
                 "/var/log/openshift-gears-async-start.log",
-                "/var/log/httpd/"
             ])
 
             self.add_cmd_outputs([
