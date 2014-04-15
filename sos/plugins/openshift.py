@@ -56,14 +56,8 @@ class Openshift(Plugin, RedHatPlugin):
                 "oo-admin-chk -v",
                 "mco ping",
                 "oo-mco ping",
-                "gem list --local"
-                "scl enable %s 'gem list --local'" % self.ruby
             ])
 
-            brokerdir = '/var/www/openshift/broker/'
-            cmd = "scl enable %s 'bundle --local'" % self.ruby
-            self.add_cmd_output(cmd, runat=brokerdir)
-                                        
         if self.is_node()
             self.add_copy_specs([
                 "/var/log/openshift/node/",
