@@ -33,7 +33,7 @@ class Ovirt(Plugin, RedHatPlugin):
         pattern=r"""
         ^
         /etc/
-        (rhevm|ovirt-engine)/
+        (rhevm|ovirt-engine|ovirt-engine-dwh)/
         engine.conf
         (\.d/.+.conf)?
         $
@@ -42,7 +42,7 @@ class Ovirt(Plugin, RedHatPlugin):
 
     DEFAULT_SENSITIVE_KEYS = (
         'ENGINE_DB_PASSWORD:ENGINE_PKI_TRUST_STORE_PASSWORD:'
-        'ENGINE_PKI_ENGINE_STORE_PASSWORD'
+        'ENGINE_PKI_ENGINE_STORE_PASSWORD:DWH_DB_PASSWORD'
     )
 
     plugin_name = "ovirt"
@@ -74,7 +74,9 @@ class Ovirt(Plugin, RedHatPlugin):
         self.add_copy_specs([
             "/etc/ovirt-engine",
             "/etc/rhevm",
+            "/etc/ovirt-engine-dwh",
             "/var/log/ovirt-engine",
+            "/var/log/ovirt-engine-dwh",
             "/var/log/rhevm",
             "/etc/sysconfig/ovirt-engine",
             "/usr/share/ovirt-engine/conf",
